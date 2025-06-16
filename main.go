@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/credentials"
 )
 
@@ -51,17 +52,22 @@ func main() {
 	e := echo.New()
 	e.Use(otelecho.Middleware(serviceName))
 
-	trace := otel.Tracer("api")
+	tracer := otel.Tracer("api")
 	e.GET("/", func(c echo.Context) error {
-		_, span := trace.Start(c.Request().Context(), "hello-world")
+		ctx, span := tracer.Start(c.Request().Context(), "hello-world")
 		defer span.End()
 
+		go func(ctx context.Context) {
+			_, span := tracer.Start(ctx, "ini-child",
+				trace.WithAttributes(attribute.String("hello,", " ini child")))
+			defer span.End()
+		}(ctx)
 		return c.String(http.StatusOK, "Hello, World!")
 	})
 
 	e.GET("/for-loop", func(c echo.Context) error {
 		for i := range 10 {
-			_, iSpan := trace.Start(c.Request().Context(), fmt.Sprintf("Sample-%d", i))
+			_, iSpan := tracer.Start(c.Request().Context(), fmt.Sprintf("Sample-%d", i))
 			log.Printf("Doing really hard work (%d / 10)\n", i+1)
 			if i == 3 || i == 7 {
 				time.Sleep(time.Millisecond * 100)
