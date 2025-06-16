@@ -1,6 +1,6 @@
 # OpenTelemetry (OTel) + SigNoz Tracing Demo
 
-This project is a minimal demonstration of integrating **OpenTelemetry (OTel)** with **SigNoz** in a Go application.  
+This project is a minimal demonstration of integrating **OpenTelemetry (OTel)** with or without **SigNoz** in a Go application.  
 Currently, it focuses **only on the `trace` signal** for observability.
 
 ---
@@ -14,7 +14,9 @@ Currently, it focuses **only on the `trace` signal** for observability.
 
 ## 🛠️ How to Run
 
-### 1. Start SigNoz Locally
+### Option A — Use SigNoz Dashboard (Full Setup)
+
+#### 1. Start SigNoz Locally
 
 You can run SigNoz using Docker:
 
@@ -32,9 +34,7 @@ http://localhost:8080/
 
 This is the SigNoz dashboard where traces will be visualized.
 
----
-
-### 2. Confirm Collector Port
+#### 2. Confirm Collector Port
 
 Check the collector ports using:
 
@@ -42,7 +42,7 @@ Check the collector ports using:
 docker ps
 ```
 
-You should see something like this:
+You should see something like:
 
 ```
 0.0.0.0:4317-4318->4317-4318/tcp
@@ -50,9 +50,7 @@ You should see something like this:
 
 These ports are used for sending trace data via gRPC (4317) and HTTP (4318).
 
----
-
-### 3. Run the Go App
+#### 3. Run the Go App
 
 Run the demo app locally:
 
@@ -61,6 +59,61 @@ go run .
 ```
 
 Make a request to your API using Postman or curl. The traces will be automatically sent to SigNoz and appear in the dashboard.
+
+---
+
+### Option B — Use OTel Collector **Without** Observability Backend (Debug Only)
+
+You can also test OTel without any observability backend like SigNoz, Jaeger, or Prometheus.
+
+Simply skip the SigNoz installation step and instead:
+
+1. Use the provided `docker-compose.yml` (containing only the OTel Collector).
+2. Start the OTel Collector with:
+
+```bash
+docker compose up -d
+```
+
+This setup logs trace data to the console using the `debug` exporter.
+
+#### 🔍 View Trace Output
+
+To see the collected trace logs:
+
+- Open Docker Desktop and view container logs, or
+- Use the CLI:
+
+```bash
+docker compose logs -f otel-collector
+```
+
+You should see output like:
+
+```
+2025-06-16T11:15:47.913Z  info  Traces  {
+  "service.name": "otelcol",
+  "otelcol.component.kind": "exporter",
+  "otelcol.signal": "traces",
+  "resource spans": 1,
+  "spans": 3
+}
+
+Resource attributes:
+-> library.language: Str(go)
+-> service.name: Str(demo_otel)
+
+Span #0
+Trace ID : f81f9fe1941ebe2526eada0bc88af800
+Parent ID : 3f8467a1665ac2dc
+ID : a505640321935c51
+Name : hello-world
+Kind : Internal
+Start time : 2025-06-16 11:15:48.8160842 +0000 UTC
+End time   : 2025-06-16 11:15:48.8160842 +0000 UTC
+```
+
+This is useful for testing trace generation **without setting up a full observability stack**.
 
 ---
 
@@ -74,5 +127,6 @@ Make a request to your API using Postman or curl. The traces will be automatical
 
 ## 📌 Notes
 
-- Ensure the ports used by the collector are correctly mapped and accessible from your Go app.
-- This project can be extended later to support other OTel signals like metrics and logs.
+- Ensure the ports used by the collector (`4317`, `4318`) are correctly mapped and accessible from your Go app.
+- This project currently only supports traces but can be extended to include metrics and logs.
+- Using the debug exporter is perfect for local development or integration testing without third-party UIs.
