@@ -1,13 +1,38 @@
 # fluentBit -> otelCollector -> Signoz
 services:
+  go-app:
+    build:
+      context: .
+    container_name: go-app
+    labels:
+      - "log-type=go_app"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - SERVICE_NAME=demo_otel
+      - OTEL_EXPORTER_OTLP_ENDPOINT=signoz-otel-collector:4317
+      - INSECURE_MODE=true
+    ports:
+      - "1323:1323"
+    networks:
+      - otel-network
+
   fluent-bit:
     image: cr.fluentbit.io/fluent/fluent-bit
     container_name: fluent-bit
     volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./fluent-bit_to_signoz.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./parsers.conf:/fluent-bit/etc/parsers.conf
     command: -c /fluent-bit/etc/fluent-bit.conf
     networks:
       - otel-network
+    depends_on:
+      - go-app
 
 networks:
   otel-network:
