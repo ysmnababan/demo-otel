@@ -9,3 +9,12 @@ services:
       - "4318:4318"   # OTLP HTTP
       - "55679:55679" # zPages (optional for debugging)
     command: ["--config=/etc/otelcol/config.yaml"]
+
+  fluent-bit:
+    image: cr.fluentbit.io/fluent/fluent-bit:latest
+    container_name: fluent-bit
+    depends_on:
+      - otel-collector
+    volumes:
+      - ./:/fluent-bit/etc/
+    command: ["fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
