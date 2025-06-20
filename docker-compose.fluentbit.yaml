@@ -1,0 +1,14 @@
+# fluentBit -> otelCollector -> Signoz
+services:
+  fluent-bit:
+    image: cr.fluentbit.io/fluent/fluent-bit
+    container_name: fluent-bit
+    volumes:
+      - ./fluent-bit_to_signoz.conf:/fluent-bit/etc/fluent-bit.conf
+    command: -c /fluent-bit/etc/fluent-bit.conf
+    networks:
+      - otel-network
+
+networks:
+  otel-network:
+    external: true
