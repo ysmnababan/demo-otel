@@ -61,6 +61,16 @@ func main() {
 			_, span := tracer.Start(ctx, "ini-child",
 				trace.WithAttributes(attribute.String("hello,", " ini child")))
 			defer span.End()
+			time.Sleep(time.Second)
+
+			_, loopSpan := tracer.Start(ctx, "loop",
+				trace.WithAttributes(attribute.Int(
+					"jumlah iterasi", 10,
+				)))
+			for range 10 {
+				time.Sleep(200 * time.Millisecond)
+			}
+			loopSpan.End()
 		}(ctx)
 		return c.String(http.StatusOK, "Hello, World!")
 	})
