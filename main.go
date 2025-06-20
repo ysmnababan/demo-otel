@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,10 +27,16 @@ import (
 // https://github.com/SigNoz/sample-golang-app/blob/master/main.go
 // https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/examples/otel-collector/main.go
 // https://docs.coroot.com/tracing/opentelemetry-go?http-server=echo
+var logger zerolog.Logger
+
 func init() {
+	logger = zerolog.New(os.Stdout).With().
+		Dict("service", zerolog.Dict().
+			Str("name", "demo").Str("env", "local")).Logger()
+
 	err := godotenv.Load()
 	if err != nil {
-		panic(err)
+		logger.Warn().Msg("Hello from Zerolog global logger")
 	}
 	serviceName = os.Getenv("SERVICE_NAME")
 	collectorURL = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -56,7 +62,7 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		ctx, span := tracer.Start(c.Request().Context(), "hello-world")
 		defer span.End()
-
+		logger.Info().Msg("root for the endpoint")
 		go func(ctx context.Context) {
 			_, span := tracer.Start(ctx, "ini-child",
 				trace.WithAttributes(attribute.String("hello,", " ini child")))
@@ -78,7 +84,7 @@ func main() {
 	e.GET("/for-loop", func(c echo.Context) error {
 		for i := range 10 {
 			_, iSpan := tracer.Start(c.Request().Context(), fmt.Sprintf("Sample-%d", i))
-			log.Printf("Doing really hard work (%d / 10)\n", i+1)
+			logger.Info().Msgf("Doing really hard work (%d / 10)\n", i+1)
 			if i == 3 || i == 7 {
 				time.Sleep(time.Millisecond * 100)
 			}
@@ -106,7 +112,7 @@ func initTracer() func(context.Context) error {
 	)
 
 	if err != nil {
-		log.Fatalf("failed to create exporter: %v", err)
+		logger.Error().Err(err).Msg("failed to get the exporter")
 	}
 
 	resources, err := resource.New(
@@ -118,7 +124,7 @@ func initTracer() func(context.Context) error {
 	)
 
 	if err != nil {
-		log.Fatalf("failed to set resources: %v", err)
+		logger.Error().Err(err).Msg("failed to set resources")
 	}
 	otel.SetTracerProvider(
 		sdktrace.NewTracerProvider(
