@@ -1,7 +1,7 @@
 # OpenTelemetry (OTel) + SigNoz Tracing Demo
 
 This project is a minimal demonstration of integrating **OpenTelemetry (OTel)** with or without **SigNoz** in a Go application.  
-Currently, it focuses **only on the `trace` signal** for observability.
+Currently, it focuses **only on the `trace`and `log` signal** for observability.
 
 ---
 
@@ -18,7 +18,7 @@ Currently, it focuses **only on the `trace` signal** for observability.
 ```
 golang
   |
-  =====(trace signal)============> otel collector => collector_stdout
+  =====(trace signal)============> otel collector => Signoz
   |                                         ^
   |                                         | 
   =====(log signal)===> docker stdout => fluentbit
