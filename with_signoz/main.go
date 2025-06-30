@@ -61,8 +61,15 @@ func main() {
 	tracer := otel.Tracer("api")
 	e.GET("/", func(c echo.Context) error {
 		ctx, span := tracer.Start(c.Request().Context(), "hello-world")
+		spanId := span.SpanContext().SpanID().String()
+		traceId := span.SpanContext().TraceID().String()
 		defer span.End()
-		logger.Info().Msg("root for the endpoint")
+
+		logger.Info().
+			Str("span_id", spanId).
+			Str("trace_id", traceId).
+			Msg("root for the endpoint")
+
 		go func(ctx context.Context) {
 			_, span := tracer.Start(ctx, "ini-child",
 				trace.WithAttributes(attribute.String("hello,", " ini child")))
