@@ -14,11 +14,15 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/credentials"
 )
@@ -50,21 +54,35 @@ var (
 )
 
 func main() {
-	cleanup := initTracer()
+	tracerCleanup := initTracer()
 	defer func() {
-		_ = cleanup(context.Background())
+		_ = tracerCleanup(context.Background())
+	}()
+
+	metricCleanup := initMetric()
+	defer func() {
+		_ = metricCleanup(context.Background())
 	}()
 
 	e := echo.New()
 	e.Use(otelecho.Middleware(serviceName))
 
 	tracer := otel.Tracer("api")
+	meter := otel.Meter("api")
+	apiCounter, err := meter.Int64Counter(
+		"api.counter",
+		metric.WithDescription("Number of API calls"),
+		metric.WithUnit("{call}"),
+	)
+	if err != nil {
+		panic(err)
+	}
 	e.GET("/", func(c echo.Context) error {
 		ctx, span := tracer.Start(c.Request().Context(), "hello-world")
+		defer span.End()
 		spanId := span.SpanContext().SpanID().String()
 		traceId := span.SpanContext().TraceID().String()
-		defer span.End()
-
+		apiCounter.Add(ctx, 1)
 		logger.Info().
 			Str("span_id", spanId).
 			Str("trace_id", traceId).
@@ -89,6 +107,7 @@ func main() {
 	})
 
 	e.GET("/for-loop", func(c echo.Context) error {
+		apiCounter.Add(c.Request().Context(), 1)
 		for i := range 10 {
 			_, iSpan := tracer.Start(c.Request().Context(), fmt.Sprintf("Sample-%d", i))
 			logger.Info().Msgf("Doing really hard work (%d / 10)\n", i+1)
@@ -103,6 +122,7 @@ func main() {
 }
 
 func initTracer() func(context.Context) error {
+	logger.Info().Msg("initialize tracer")
 	var secureOption otlptracegrpc.Option
 	if strings.ToLower(insecure) == "false" || insecure == "0" || strings.ToLower("insecure") == "f" {
 		secureOption = otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))
@@ -146,4 +166,41 @@ func initTracer() func(context.Context) error {
 		propagation.Baggage{})
 	otel.SetTextMapPropagator(propagator)
 	return exporter.Shutdown
+}
+
+func initMetric() func(ctx context.Context) error {
+	logger.Info().Msg("initialize metric")
+	var secureOption otlpmetricgrpc.Option
+	if strings.ToLower(insecure) == "false" || insecure == "0" || strings.ToLower("insecure") == "f" {
+		secureOption = otlpmetricgrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))
+	} else {
+		secureOption = otlpmetricgrpc.WithInsecure()
+	}
+	_ = secureOption
+	metricExporter, err := otlpmetricgrpc.New(
+		context.Background(),
+		secureOption,
+		otlpmetricgrpc.WithEndpoint(collectorURL),
+	)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to get the metric exporter")
+	}
+
+	resource, err := resource.Merge(resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName("my-service"),
+			semconv.ServiceVersion("0.1.0"),
+		))
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to set resources")
+	}
+
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(resource),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter,
+			// Default is 1m. Set to 3s for demonstrative purposes.
+			sdkmetric.WithInterval(3*time.Second))),
+	)
+	otel.SetMeterProvider(meterProvider)
+	return meterProvider.Shutdown
 }
