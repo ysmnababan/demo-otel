@@ -18,10 +18,10 @@ Currently, it focuses **only on the `trace`and `log` signal** for observability.
 ```
 golang
   |
-  =====(trace signal)============> otel collector => Signoz
-  |                                         ^
-  |                                         | 
-  =====(log signal)===> docker stdout => fluentbit
+  =====(trace and metric signal)============> otel collector => Signoz
+  |                                                 ^
+  |                                                 | 
+  =====(log signal)==========> docker stdout => fluentbit
 ```
 #### 1. Start SigNoz Locally
 
