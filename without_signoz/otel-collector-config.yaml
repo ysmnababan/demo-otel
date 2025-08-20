@@ -6,6 +6,19 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318 #this is for receiving logging from fluent-bit
 
+processors:
+  resource:
+    attributes:
+      - key: service.name
+        from_attribute: service.name
+        action: upsert
+      - key: deployment.environment
+        value: "testing"
+        action: insert
+      - key: host.name
+        from_attribute: hostname
+        action: upsert
+
 exporters:
   debug:
     verbosity: detailed
@@ -18,4 +31,5 @@ service:
 
     logs:  
       receivers: [otlp]
+      processors: [resource]
       exporters: [debug]
