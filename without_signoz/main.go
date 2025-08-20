@@ -62,7 +62,10 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		ctx, span := tracer.Start(c.Request().Context(), "hello-world")
 		defer span.End()
-		logger.Info().Msg("root for the endpoint")
+		logger.Info().
+			Str("trace_id", span.SpanContext().TraceID().
+				String()).Str("span_id", span.SpanContext().SpanID().String()).
+			Msg("root for the endpoint")
 		go func(ctx context.Context) {
 			_, span := tracer.Start(ctx, "ini-child",
 				trace.WithAttributes(attribute.String("hello,", " ini child")))
@@ -93,7 +96,8 @@ func main() {
 		return c.String(http.StatusOK, "For looping")
 	})
 	e.GET("/logger", func(c echo.Context) error {
-		logger.Info().Msg("hello this is logger only")
+		// update the trace id
+		logger.Info().Str("trace_id", "fbcdc32ec72dbb06acf8bb19a219ec2a").Str("span_id", "fbcdc32ec72dbb06acf8bb19a219ec4a").Msg("hello this is logger only")
 		return c.String(http.StatusOK, "For looping")
 	})
 	e.Logger.Fatal(e.Start(":1323"))
