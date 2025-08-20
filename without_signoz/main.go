@@ -92,6 +92,10 @@ func main() {
 		}
 		return c.String(http.StatusOK, "For looping")
 	})
+	e.GET("/logger", func(c echo.Context) error {
+		logger.Info().Msg("hello this is logger only")
+		return c.String(http.StatusOK, "For looping")
+	})
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
