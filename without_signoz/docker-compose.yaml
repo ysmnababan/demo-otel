@@ -11,7 +11,7 @@ services:
     command: ["--config=/etc/otelcol/config.yaml"]
 
   fluent-bit:
-    image: fluent/fluent-bit:latest
+    image: fluent/fluent-bit:4.0
     container_name: fluent-bit
     volumes:
       - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
@@ -30,7 +30,7 @@ services:
       driver: fluentd
       options:
         fluentd-address: host.docker.internal:24224
-        tag: go-app
+        tag: api
     depends_on:
       - fluent-bit
     ports:
