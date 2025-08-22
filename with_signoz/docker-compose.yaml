@@ -9,7 +9,7 @@ services:
       driver: fluentd
       options:
         fluentd-address: host.docker.internal:24224
-        tag: go-app
+        tag: api
     environment:
       - SERVICE_NAME=demo_otel
       - OTEL_EXPORTER_OTLP_ENDPOINT=signoz-otel-collector:4317
@@ -22,7 +22,7 @@ services:
       - otel-network
 
   fluent-bit:
-    image: fluent/fluent-bit:latest
+    image: fluent/fluent-bit:4.0
     container_name: fluent-bit
     volumes:
       - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
