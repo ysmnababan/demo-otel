@@ -1,0 +1,18 @@
+services:
+  go-app:
+    build:
+      context: .
+    container_name: go-app
+    restart: always
+    environment:
+      - SERVICE_NAME=demo_otel
+      - OTEL_EXPORTER_OTLP_ENDPOINT=signoz-otel-collector:4317
+      - INSECURE_MODE=true
+    ports:
+      - "1323:1323"
+    networks:
+      - signoz-net
+
+networks:
+  signoz-net:
+    external: true
