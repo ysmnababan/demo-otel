@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc/credentials"
 
 	// "go.opentelemetry.io/otel/sdk/trace"
@@ -91,7 +90,7 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTracerProvider() (*trace.TracerProvider, error) {
+func newTracerProvider() (*sdktrace.TracerProvider, error) {
 	var secureOption otlptracegrpc.Option
 	if strings.ToLower(insecure) == "false" || insecure == "0" || strings.ToLower("insecure") == "f" {
 		secureOption = otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))

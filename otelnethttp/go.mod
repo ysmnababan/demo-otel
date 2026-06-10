@@ -3,6 +3,7 @@ module otelnethttp
 go 1.25.0
 
 require (
+	github.com/joho/godotenv v1.5.1
 	go.opentelemetry.io/contrib/bridges/otelslog v0.18.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/otel v1.43.0
